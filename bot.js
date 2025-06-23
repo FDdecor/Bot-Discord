@@ -20,7 +20,7 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return; // 忽略 Bot 的訊息
 
   const userInput = message.content;
-  const isDM = message.channel.type === 1; // 1 表示 DMChannel
+  const isDM = message.channel.type === 'DM';
 
   // 回應訊息
   if (isDM) {
