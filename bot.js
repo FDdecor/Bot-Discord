@@ -7,7 +7,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
   ],
   partials: [Partials.Channel], // 必要才能收到 DM
 });
@@ -17,28 +17,36 @@ client.once('ready', () => {
 });
 
 client.on('messageCreate', async (message) => {
-  if (message.author.bot) return; // 忽略 Bot 的訊息
+  if (message.author.bot) return;
 
   const userInput = message.content;
   const isDM = message.channel.type === 'DM';
 
-  // 回應訊息
-  if (isDM) {
-    await message.reply(`📨 我收到你的私人訊息：「${userInput}」`);
-  } else {
-    await message.reply(`📢 你在伺服器說了：「${userInput}」`);
-  }
-
-  // 發送到 n8n webhook
+  // 傳送給 n8n，並等待回應
   try {
-    await axios.post(process.env.N8N_WEBHOOK_URL, {
+    const response = await axios.post(process.env.N8N_WEBHOOK_URL, {
       user: message.author.username,
       content: userInput,
       channel: isDM ? 'DM' : 'Server',
     });
-    console.log('✅ 成功傳送訊息到 n8n');
+
+    const reply = response.data;
+
+    // 根據 n8n 回傳的格式作出不同的回應
+    if (reply.content) {
+      await message.reply(reply.content);
+    } else if (reply.embeds) {
+      await message.reply({ embeds: reply.embeds });
+    } else if (reply.files) {
+      await message.reply({ content: reply.content || '', files: reply.files });
+    } else {
+      await message.reply('⚠️ 收到未知格式的回應。');
+    }
+
+    console.log('✅ 回應已發送到 Discord 使用者');
   } catch (err) {
-    console.error('❌ 傳送 n8n 失敗：', err.message);
+    console.error('❌ 與 n8n 溝通失敗：', err.message);
+    await message.reply('❌ 無法取得 AI 回應，請稍後再試。');
   }
 });
 
