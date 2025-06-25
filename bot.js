@@ -9,7 +9,7 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel], // 必要才能收到 DM
+  partials: [Partials.Channel],
 });
 
 client.once('ready', () => {
@@ -20,7 +20,7 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   const userInput = message.content;
-  const isDM = message.channel.type === ChannelType.DM; // ✅ 判斷是否為私訊
+  const isDM = message.channel.type === ChannelType.DM;
 
   try {
     const response = await axios.post(process.env.N8N_CHAT_TRIGGER_URL, {
@@ -28,17 +28,22 @@ client.on('messageCreate', async (message) => {
       userId: message.author.id,
       userName: message.author.username,
       content: userInput,
-      channel: isDM ? 'DM' : 'Server' // ✅ 傳送訊息來源類型
+      channel: isDM ? 'DM' : 'Server',
     });
 
     const reply = response.data;
 
-    if (reply.content) {
-      await message.reply(reply.content);
-    } else if (reply.embeds) {
-      await message.reply({ embeds: reply.embeds });
-    } else if (reply.files) {
-      await message.reply({ content: reply.content || '', files: reply.files });
+    if (Array.isArray(reply) && reply.length > 0) {
+      for (const item of reply) {
+        if (item.type === 'text' && item.content) {
+          await message.reply(item.content);
+        }
+        // 可依需求加處理其他類型，例如 image、link、file、audio 等
+        else {
+          // 目前未支援的類型，可以回覆提示或忽略
+          console.warn('收到未知類型訊息:', item.type);
+        }
+      }
     } else {
       await message.reply('⚠️ 收到未知格式的回應。');
     }
@@ -51,4 +56,3 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
-
