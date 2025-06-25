@@ -20,18 +20,17 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   const userInput = message.content;
-  const isDM = message.channel.type === 'DM';
 
-  // 傳送給 n8n，並等待回應
   try {
-    const response = await axios.post(process.env.N8N_WEBHOOK_URL, {
+    const response = await axios.post(process.env.N8N_CHAT_TRIGGER_URL, {
+      messenger: 'discord',
       userId: message.author.id,
-      message: userInput,
+      userName: message.author.username,
+      content: userInput,
     });
 
     const reply = response.data;
 
-    // 根據 n8n 回傳的格式作出不同的回應
     if (reply.content) {
       await message.reply(reply.content);
     } else if (reply.embeds) {
