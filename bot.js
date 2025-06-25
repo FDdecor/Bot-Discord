@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ChannelType } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -20,6 +20,7 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   const userInput = message.content;
+  const isDM = message.channel.type === ChannelType.DM; // ✅ 判斷是否為私訊
 
   try {
     const response = await axios.post(process.env.N8N_CHAT_TRIGGER_URL, {
@@ -27,6 +28,7 @@ client.on('messageCreate', async (message) => {
       userId: message.author.id,
       userName: message.author.username,
       content: userInput,
+      channel: isDM ? 'DM' : 'Server' // ✅ 傳送訊息來源類型
     });
 
     const reply = response.data;
@@ -49,3 +51,4 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
