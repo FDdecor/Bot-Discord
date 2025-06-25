@@ -25,9 +25,8 @@ client.on('messageCreate', async (message) => {
   // 傳送給 n8n，並等待回應
   try {
     const response = await axios.post(process.env.N8N_WEBHOOK_URL, {
-      user: message.author.username,
-      content: userInput,
-      channel: isDM ? 'DM' : 'Server',
+      userId: message.author.id,
+      message: userInput,
     });
 
     const reply = response.data;
