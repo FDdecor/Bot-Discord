@@ -9,7 +9,7 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel], // 接收 DM
+  partials: [Partials.Channel],
 });
 
 client.once('ready', () => {
@@ -31,32 +31,23 @@ client.on('messageCreate', async (message) => {
       channel: isDM ? 'DM' : 'Server',
     });
 
+    console.log('🛠 來自 n8n 的原始回應（response.data）:', response.data);
+
     const reply = response.data;
 
-    if (!Array.isArray(reply)) {
-      await message.reply('⚠️ 收到未知格式的回應（非陣列）。');
-      console.warn('非陣列格式：', reply);
-      return;
-    }
-
-    for (const item of reply) {
-      if (!item || !item.type || !item.content) continue;
-
-      switch (item.type) {
-        case 'text':
-        case 'link':
+    if (Array.isArray(reply) && reply.length > 0) {
+      for (const item of reply) {
+        if (item.type === 'text' && item.content) {
           await message.reply(item.content);
-          break;
-        case 'image':
-        case 'file':
-        case 'audio':
-          await message.reply({ files: [item.content] });
-          break;
-        default:
-          await message.reply(`⚠️ 收到不支援的訊息類型：${item.type}`);
-          console.warn('未支援類型：', item);
-          break;
+        }
+        // 可依需求加處理其他類型，例如 image、link、file、audio 等
+        else {
+          // 目前未支援的類型，可以回覆提示或忽略
+          console.warn('收到未知類型訊息:', item.type);
+        }
       }
+    } else {
+      await message.reply('⚠️ 收到未知格式的回應。');
     }
 
     console.log('✅ 回應已發送到 Discord 使用者');
