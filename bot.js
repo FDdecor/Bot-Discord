@@ -23,31 +23,52 @@ client.on('messageCreate', async (message) => {
   const isDM = message.channel.type === ChannelType.DM;
 
   try {
-    const response = await axios.post(process.env.N8N_CHAT_TRIGGER_URL, {
-      messenger: 'discord',
-      userId: message.author.id,
-      userName: message.author.username,
-      content: userInput,
-      channel: isDM ? 'DM' : 'Server',
-    });
+    const response = await axios.post(
+      process.env.N8N_CHAT_TRIGGER_URL,
+      {
+        messenger: 'discord',
+        userId: message.author.id,
+        userName: message.author.username,
+        content: userInput,
+        channel: isDM ? 'DM' : 'Server',
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
 
-    console.log('🛠 來自 n8n 的原始回應（response.data）:', response.data);
+    let reply = response.data;
 
-    const reply = response.data;
+    // ★ 日誌幫助偵錯
+    console.log('🛠 [DEBUG] n8n 回傳給 Bot 的 reply:', JSON.stringify(reply, null, 2));
 
-    if (Array.isArray(reply) && reply.length > 0) {
-      for (const item of reply) {
-        if (item.type === 'text' && item.content) {
-          await message.reply(item.content);
-        }
-        // 可依需求加處理其他類型，例如 image、link、file、audio 等
-        else {
-          // 目前未支援的類型，可以回覆提示或忽略
-          console.warn('收到未知類型訊息:', item.type);
-        }
+    // 若單一物件，試著包成陣列
+    if (!Array.isArray(reply) && typeof reply === 'object' && reply.type && reply.content) {
+      reply = [reply];
+    }
+
+    if (!Array.isArray(reply)) {
+      await message.reply('⚠️ 收到未知格式的回應（非陣列）。');
+      console.warn('非陣列格式：', reply);
+      return;
+    }
+
+    for (const item of reply) {
+      if (typeof item !== 'object' || !item.type || !item.content) continue;
+
+      const content = item.content;
+      switch (item.type) {
+        case 'text':
+        case 'link':
+          await message.reply(content);
+          break;
+        case 'image':
+        case 'file':
+        case 'audio':
+          await message.reply({ files: [content] });
+          break;
+        default:
+          await message.reply(`⚠️ 收到不支援的訊息類型：${item.type}`);
+          console.warn('未支援類型：', item);
       }
-    } else {
-      await message.reply('⚠️ 收到未知格式的回應。');
     }
 
     console.log('✅ 回應已發送到 Discord 使用者');
@@ -58,3 +79,4 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
