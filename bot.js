@@ -21,6 +21,7 @@ client.on('messageCreate', async (message) => {
 
   const userInput = message.content;
   const isDM = message.channel.type === ChannelType.DM;
+  const guildId = message.guild ? message.guild.id : null; // ✅ 加入 guildId 判斷
 
   try {
     const response = await axios.post(
@@ -31,6 +32,7 @@ client.on('messageCreate', async (message) => {
         userName: message.author.username,
         content: userInput,
         channel: isDM ? 'DM' : 'Server',
+        guildId: guildId, // ✅ 傳送 guildId 給 n8n
       },
       { headers: { 'Content-Type': 'application/json' } }
     );
@@ -79,4 +81,3 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
-
